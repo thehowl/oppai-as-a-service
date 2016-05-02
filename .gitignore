@@ -1,0 +1,5 @@
+oppai
+oppai-as-a-service
+.conf
+maps/*
+!maps/.keep
