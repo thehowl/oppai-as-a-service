@@ -51,7 +51,7 @@ func ScorePOST(c *gin.Context) {
 	rep, err := osr.Unmarshal(bytes.NewBuffer(rawData))
 	if err != nil {
 		c.Error(err)
-		c.JSON(500, baseResponse{false, "An error occurred while trying to parse your replay. Are you sure it's an .osr file?"})
+		c.JSON(400, baseResponse{false, "An error occurred while trying to parse your replay. Are you sure it's an .osr file?"})
 		return
 	}
 

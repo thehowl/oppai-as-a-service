@@ -49,10 +49,16 @@ func main() {
 	// start webserver
 	app := gin.Default()
 
+	app.LoadHTMLFiles("static/page.html")
+
 	app.POST("/api/v1/beatmap", BeatmapPOST)
 	app.POST("/api/v1/score", ScorePOST)
 	app.GET("/api/v1/score", ScoreGET)
 	app.GET("/api/v1/score/submit", ScoreSubmitGET)
+
+	app.Any("/", Frontend)
+
+	app.Static("/static", "static")
 
 	app.Run(":42043")
 }

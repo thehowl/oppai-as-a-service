@@ -1,0 +1,8 @@
+body {
+	background-color: #eee;
+	padding-top: 20px;
+}
+
+#file {
+	display: none;
+}
