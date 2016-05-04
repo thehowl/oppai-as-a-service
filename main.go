@@ -52,7 +52,7 @@ func main() {
 	app.POST("/api/v1/beatmap", BeatmapPOST)
 	app.POST("/api/v1/score", ScorePOST)
 	app.GET("/api/v1/score", ScoreGET)
-	app.GET("/api/v1/score/submit")
+	app.GET("/api/v1/score/submit", ScoreSubmitGET)
 	app.GET("/api/v1/scores_by_user")
 
 	app.Run(":42043")

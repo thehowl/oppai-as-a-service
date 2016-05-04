@@ -5,11 +5,9 @@ import (
 	"crypto/md5"
 	"database/sql"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"net/http"
-	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kennygrant/sanitize"
@@ -83,22 +81,7 @@ func ScorePOST(c *gin.Context) {
 			return
 		}
 		// get .osu file
-		websiteResp, err := http.Get(fmt.Sprintf("https://osu.ppy.sh/osu/%d", beatmaps[0].BeatmapID))
-		if err != nil {
-			c.Error(err)
-			c.JSON(500, err500)
-			return
-		}
-		// create destination file
-		destFile, err := os.Create(destFileName)
-		if err != nil {
-			c.Error(err)
-			c.JSON(500, err500)
-			return
-		}
-		defer destFile.Close()
-		// copy all data from .osu file retrieved with the osu! website to the local file
-		_, err = io.Copy(destFile, websiteResp.Body)
+		err = downloadOsuFile(beatmaps[0].BeatmapID, destFileName)
 		if err != nil {
 			c.Error(err)
 			c.JSON(500, err500)
@@ -185,6 +168,7 @@ type scoreData struct {
 		Title    string `json:"title"`
 		DiffName string `json:"diff_name"`
 		Creator  string `json:"creator"`
+		MD5      string `json:"md5"`
 	} `json:"beatmap"`
 }
 
@@ -208,7 +192,8 @@ func ScoreGET(c *gin.Context) {
 	SELECT 
 		scores.player, scores.accuracy, scores.mods,
 		scores.calculated, scores.total_pp,
-		beatmaps.author, beatmaps.title, beatmaps.diff_name, beatmaps.creator
+		beatmaps.author, beatmaps.title, beatmaps.diff_name,
+		beatmaps.creator, beatmaps.md5
 	FROM scores
 	LEFT JOIN beatmaps
 		ON scores.beatmap_id = beatmaps.id
@@ -216,21 +201,170 @@ func ScoreGET(c *gin.Context) {
 	LIMIT 1`, scoreID).Scan(
 		&sd.Score.Player, &sd.Score.Accuracy, &sd.Score.Mods,
 		&sd.Calculated, &sd.Score.PP,
-		&sd.Beatmap.Author, &sd.Beatmap.Title, &sd.Beatmap.DiffName, &sd.Beatmap.Creator,
+		&sd.Beatmap.Author, &sd.Beatmap.Title, &sd.Beatmap.DiffName,
+		&sd.Beatmap.Creator, &sd.Beatmap.MD5,
 	)
 	if err == sql.ErrNoRows {
 		c.JSON(404, baseResponse{false, "That score could not be found!"})
+		return
 	}
 	if err != nil {
 		c.Error(err)
 		c.JSON(500, err500)
 		return
 	}
+	sd.Score.ModsStr = osuapi.Mods(sd.Score.Mods).String()
 	sd.Ok = true
 	c.JSON(200, sd)
 }
 
-// ScoreSubmitGET allows for score submission of a score without having to give a replay.
+// ScoreSubmitGET allows for score submission of a score without having to give a replay file.
 func ScoreSubmitGET(c *gin.Context) {
+	// TODO: this function is essentially copypaste of ScorePOST. merge where possible
 
+	// Okay so I had many things to check for being valid here.
+	// as making the usual != nil over and over would just be spaghetti, I had
+	// a great idea.
+	// Why not put all errors in array and then check the array with a for
+	// range at the end?
+	var errors [3]error
+	var task oppaiTask
+	task.Accuracy, errors[0] = strconv.ParseFloat(c.Query("accuracy"), 64)
+	task.MaxCombo, errors[1] = strconv.Atoi(c.Query("max_combo"))
+	task.Misses, errors[2] = strconv.Atoi(c.Query("misses"))
+	task.Mods = osuapi.ParseMods(strings.ToUpper(c.Query("mods")))
+	for _, err := range errors {
+		if err != nil {
+			c.JSON(400, baseResponse{false, "Please provide parameters as specified in the API"})
+			return
+		}
+	}
+
+	// get beatmap info values
+	var err error
+	var gbo osuapi.GetBeatmapsOpts
+	switch {
+	case c.Query("beatmap_hash") != "":
+		gbo.BeatmapHash = c.Query("beatmap_hash")
+	case c.Query("beatmap_id") != "":
+		gbo.BeatmapID, err = strconv.Atoi(c.Query("beatmap_id"))
+		if err != nil {
+			c.JSON(400, baseResponse{false, "Please provide a valid beatmap ID"})
+			return
+		}
+	default:
+		c.JSON(500, baseResponse{false, "Must provide either beatmap_hash or beatmap_id"})
+		return
+	}
+
+	var scoreMD5 string
+	if gbo.BeatmapHash != "" {
+		// make sure score with same exact stuff doesn't already exist
+		scoreMD5 = fmt.Sprintf("%x", md5.Sum([]byte(strings.Join([]string{
+			c.Query("accuracy"),
+			c.Query("max_combo"),
+			c.Query("misses"),
+			c.Query("mods"),
+			gbo.BeatmapHash,
+		}, ":"))))
+
+		if scoreID := getScoreIDIfExists(scoreMD5); scoreID != 0 {
+			s := scorePostResponse{}
+			s.Ok = true
+			s.ScoreID = scoreID
+			c.JSON(200, s)
+			return
+		}
+	}
+
+	var bid int
+	destFileName := fmt.Sprintf("maps/%s.osu", gbo.BeatmapHash)
+	if gbo.BeatmapHash != "" {
+		bid = beatmapIDIfExists(gbo.BeatmapHash)
+	}
+	if bid == 0 {
+		fmt.Printf("%+v\n", gbo)
+		beatmaps, err := api.GetBeatmaps(gbo)
+		if err != nil {
+			c.Error(err)
+			c.JSON(500, baseResponse{false, "Couldn't get beatmap from osu!"})
+			return
+		}
+		if len(beatmaps) == 0 {
+			c.JSON(404, baseResponse{false, "That beatmap couldn't be found!"})
+			return
+		}
+
+		destFileName = fmt.Sprintf("maps/%s.osu", beatmaps[0].FileMD5)
+
+		bid = beatmapIDIfExists(beatmaps[0].FileMD5)
+
+		if bid == 0 {
+			// get .osu file
+			err = downloadOsuFile(beatmaps[0].BeatmapID, destFileName)
+			if err != nil {
+				c.Error(err)
+				c.JSON(500, err500)
+				return
+			}
+			// create beatmap in db
+			insertRes, err := db.Exec("INSERT INTO beatmaps(md5, author, title, diff_name, creator) VALUES (?, ?, ?, ?, ?)",
+				beatmaps[0].FileMD5, beatmaps[0].Artist, beatmaps[0].Title, beatmaps[0].DiffName, beatmaps[0].Creator)
+			if err != nil {
+				c.Error(err)
+				c.JSON(500, err500)
+				return
+			}
+			// get beatmap id in db
+			lid, err := insertRes.LastInsertId()
+			if err != nil {
+				c.Error(err)
+				c.JSON(500, err500)
+				return
+			}
+			// return beatmap id
+			bid = int(lid)
+		}
+
+		gbo.BeatmapHash = beatmaps[0].FileMD5
+	}
+
+	scoreMD5 = fmt.Sprintf("%x", md5.Sum([]byte(strings.Join([]string{
+		c.Query("accuracy"),
+		c.Query("max_combo"),
+		c.Query("misses"),
+		c.Query("mods"),
+		gbo.BeatmapHash,
+	}, ":"))))
+
+	task.ScoreID = getScoreIDIfExists(scoreMD5)
+
+	if task.ScoreID == 0 {
+		// insert score into table
+		lidRaw, err := db.Exec("INSERT INTO scores (replay_md5, beatmap_id, accuracy, mods, max_combo, misses) VALUES (?, ?, ?, ?, ?, ?)",
+			scoreMD5, bid, task.Accuracy, int(task.Mods), task.MaxCombo, task.Misses)
+		if err != nil {
+			c.Error(err)
+			c.JSON(500, err500)
+			return
+		}
+		// get score id
+		lid, err := lidRaw.LastInsertId()
+		if err != nil {
+			c.Error(err)
+			c.JSON(500, err500)
+			return
+		}
+		task.ScoreID = int(lid)
+	}
+
+	// enqueue pp calculation task
+	task.FilePath = destFileName
+	tasks <- task
+
+	// respond
+	s := scorePostResponse{}
+	s.Ok = true
+	s.ScoreID = task.ScoreID
+	c.JSON(200, s)
 }
