@@ -33,7 +33,8 @@ func main() {
 		return
 	}
 
-	// start api client
+	// start api client, with a rate limit of 500
+	osuapi.RateLimit(500)
 	api = osuapi.NewClient(cf.APIKey)
 	err = api.Test()
 	if err != nil {

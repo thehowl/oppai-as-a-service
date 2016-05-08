@@ -10,6 +10,7 @@
 			<div class="mui-panel">
 				<h1>Oppai as a service</h1>
 				<h4>Because who can be bothered to set up oppai on their local machine anyway.</h4>
+				<p class="mui--text-dark"><!-- secondary --> <b>Instructions:</b> use that big fancy upload button to upload your .osr files, and we'll do the magic. You can also calculate PP of an unsubmitted beatmap, but you have to upload the .osu file of the replay you wish to upload. Don't worry, we won't share it around :).</p>
 				<button id="label-click" class="mui-btn mui-btn--raised mui-btn--primary">Upload!</button> <span class="mui--text-dark-secondary">(... or drag and drop a file to this window! we'll take care of it.)</span>
 				<input id="file" type="file" name="replay" multiple>
 			</div>
@@ -20,5 +21,12 @@
 		<script src="https://cdn.rawgit.com/blueimp/jQuery-File-Upload/master/js/vendor/jquery.ui.widget.js"></script>
 		<script src="https://cdn.rawgit.com/blueimp/jQuery-File-Upload/master/js/jquery.fileupload.js"></script>
 		<script src="/static/script.js"></script>
+		{{ if .elements }}
+			<script>
+				{{ range $key, $value := .elements}}
+					printResult(genPanel(), {{ $value }}, true);
+				{{ end }}
+			</script>
+		{{ end }}
 	</body>
 </html>

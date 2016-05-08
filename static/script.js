@@ -27,9 +27,19 @@ function escapeHtml(string) {
 	});
 }
 
-var printResult = function (jqObj, scoreID) {
+function genPanel() {
+	return $('<div/>').addClass("mui-panel").appendTo('#cont');
+}
+
+var curPath = "/" + (window.location.search == "" ? "?" : window.location.search);
+
+var printResult = function (jqObj, scoreID, alreadyDone) {
 	if (typeof scoreID === "undefined") {
 		return;
+	}
+	if (!alreadyDone) {
+		curPath += "&score_id=" + scoreID;
+		window.history.pushState("", "", curPath);
 	}
 	$.getJSON("/api/v1/score?id=" + scoreID, function (resp) {
 		if (!resp.ok) {
@@ -60,7 +70,7 @@ var printResult = function (jqObj, scoreID) {
 		);
 		if (resp.calculated == 0) {
 			window.setTimeout(function () {
-				printResult(jqObj, scoreID);
+				printResult(jqObj, scoreID, true);
 			}, 5000);
 		}
 	});
@@ -76,7 +86,7 @@ $(function () {
 		acceptFileTypes: /(\.)(osr|osu)$/i,
 		maxFileSize: 1024 * 1024,
 	}).on('fileuploadadd', function (e, data) {
-		data.context = $('<div/>').addClass("mui-panel").appendTo('#cont');
+		data.context = genPanel();
 		var that = $(this).data('blueimpFileupload');
 		$.each(data.files, function (index, file) {
 			var ext = file.name.split(".").pop();
