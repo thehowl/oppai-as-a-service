@@ -6,3 +6,7 @@ body {
 #file {
 	display: none;
 }
+
+.mustclick {
+	cursor:pointer;
+}

@@ -130,3 +130,17 @@ $(function () {
 $("#label-click").click(function () {
 	$("#file").click();
 });
+
+function donationModal() {
+	// initialize modal element
+	var modalEl = document.createElement('div');
+	modalEl.style.width = '400px';
+	modalEl.style.height = '400px';
+	modalEl.style.margin = '100px auto';
+	modalEl.style.backgroundColor = '#fff';
+	modalEl.className = "mui-panel";
+	modalEl.innerHTML = "<p>So, someone asked for it, and there we go I guess.</p><p>When you want to make a donation to OaaS, you must think on what you believe of this service to be great.</p><ol><li>The PP formula. In that case, get osu! supporter (Tom94 works for osu!).</li><li>Oppai, the magic program that calculates the PP for any beatmap. In that case, <a href='https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5E289LJ5UUG3Q'>click here to donate to its developer</a>.</li><li>Finally, me. The dude who made the web application. If that's the case, just send some money via PayPal to dahhowl@gmail.com. Nope, no fancy link. Can't be bothered.</li></ol>"; 
+
+	// show modal
+	mui.overlay('on', modalEl);
+}
