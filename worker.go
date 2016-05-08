@@ -33,6 +33,7 @@ func Worker() {
 			strconv.Itoa(task.MaxCombo)+"x",
 			strconv.Itoa(task.Misses)+"m",
 		)
+		fmt.Println("=> oppai", cmd.Args)
 		stdout := bytes.NewBuffer(nil)
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = stdout
