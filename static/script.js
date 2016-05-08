@@ -96,8 +96,7 @@ $(function () {
 			} else if (ext != "osr") {
 				// I haven't got the slightest idea of how this works. But it does. So yeah.
 				$(data.context).html($('<span class="mui--text-accent"/>').text("Please upload either an .osu file or .osr file."));
-				e.preventDefault();
-				data.files = [];
+				data.context = $("<div hidden />");
 				return false;
 			} else {
 				that.options.url = "/api/v1/score";
