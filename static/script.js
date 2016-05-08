@@ -12,6 +12,20 @@ if (!String.prototype.format) {
     });
   };
 }
+var entityMap = {
+	"&": "&amp;",
+	"<": "&lt;",
+	">": "&gt;",
+	'"': '&quot;',
+	"'": '&#39;',
+	"/": '&#x2F;'
+};
+
+function escapeHtml(string) {
+	return String(string).replace(/[&<>"'\/]/g, function (s) {
+		return entityMap[s];
+	});
+}
 
 var printResult = function (jqObj, scoreID) {
 	if (typeof scoreID === "undefined") {
@@ -32,7 +46,18 @@ var printResult = function (jqObj, scoreID) {
 			resp.score.pp += "pp";
 		}
 		var modsStr = resp.score.mods_str != "" ? " +" + resp.score.mods_str : "";
-		$(jqObj).html("<h1><b>{0}</b></h1><h4 class='mui--text-dark-secondary'>{1} on {2} - {3} [{4}] ({5}){6}</h4>".format(resp.score.pp, resp.score.player, resp.beatmap.author, resp.beatmap.title, resp.beatmap.diff_name, resp.beatmap.creator, modsStr));
+		$(jqObj).html(
+			"<h1><b>{0}</b></h1><h4 class='mui--text-dark-secondary'>{1} on {2} - {3} [{4}] ({5}){6}</h4>"
+				.format(
+					resp.score.pp, 
+					escapeHtml(resp.score.player),
+					escapeHtml(resp.beatmap.author),
+					escapeHtml(resp.beatmap.title),
+					escapeHtml(resp.beatmap.diff_name),
+					escapeHtml(resp.beatmap.creator),
+					modsStr
+				)
+		);
 		if (resp.calculated == 0) {
 			window.setTimeout(function () {
 				printResult(jqObj, scoreID);
@@ -52,7 +77,7 @@ $(function () {
 		maxFileSize: 1024 * 1024,
 	}).on('fileuploadadd', function (e, data) {
 		data.context = $('<div/>').addClass("mui-panel").appendTo('#cont');
-		var that = $(this).data('blueimpFileupload'); 
+		var that = $(this).data('blueimpFileupload');
 		$.each(data.files, function (index, file) {
 			var ext = file.name.split(".").pop();
 			if (ext == "osu") {
@@ -65,7 +90,7 @@ $(function () {
 				data.files = [];
 				return false;
 			} else {
-				that.options.url = "/api/v1/score";				
+				that.options.url = "/api/v1/score";
 			}
 			var node = $('<p/>')
 				.append($('<span/>').text("Uploading " + file.name + "..."));
