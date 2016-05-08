@@ -10,17 +10,10 @@
 			<div class="mui-panel">
 				<h1>Oppai as a service</h1>
 				<h4>Because who can be bothered to set up oppai on their local machine anyway.</h4>
-				<button id="label-click" class="mui-btn mui-btn--raised mui-btn--primary">Upload!</button>
+				<button id="label-click" class="mui-btn mui-btn--raised mui-btn--primary">Upload!</button> <span class="mui--text-dark-secondary">(... or drag and drop a file to this window! we'll take care of it.)</span>
 				<input id="file" type="file" name="replay" multiple>
 			</div>
 		</div>
-		{{ if .Elements }}
-			{{ range $k, $v := .Elements }}
-				<div class="box">
-					{{ $v }}
-				</div>
-			{{ end }}
-		{{ end }}
 		<!-- TODO: combine & minify -->
 		<script src="//cdn.muicss.com/mui-0.5.6/js/mui.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.js"></script>
