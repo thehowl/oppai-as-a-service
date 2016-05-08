@@ -10,7 +10,7 @@ import (
 func Frontend(c *gin.Context) {
 	q := c.Request.URL.Query()
 	var elements []int
-	if vals, exists := q["score_id"]; exists {
+	if vals, exists := q["p"]; exists {
 		for _, val := range vals {
 			newEl, err := strconv.Atoi(val)
 			if err != nil {

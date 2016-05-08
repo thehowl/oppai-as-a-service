@@ -38,7 +38,7 @@ var printResult = function (jqObj, scoreID, alreadyDone) {
 		return;
 	}
 	if (!alreadyDone) {
-		curPath += "&score_id=" + scoreID;
+		curPath += "&p=" + scoreID;
 		window.history.pushState("", "", curPath);
 	}
 	$.getJSON("/api/v1/score?id=" + scoreID, function (resp) {
