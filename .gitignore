@@ -3,3 +3,4 @@ oppai-as-a-service
 .conf
 maps/*
 !maps/.keep
+oaas.conf

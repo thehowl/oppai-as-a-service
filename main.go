@@ -3,38 +3,38 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/thehowl/conf"
 	"gopkg.in/thehowl/go-osuapi.v1"
 )
 
 var db *sql.DB
 var api *osuapi.Client
+var cf confSt
 
 func main() {
-	dsn := os.Getenv("DSN")
-	apiKey := os.Getenv("OSU_API_KEY")
-	if dsn == "" {
-		fmt.Println("Please set a DSN for connecting to the database")
-		return
-	}
-	if apiKey == "" {
-		fmt.Println("Please set an OSU_API_KEY")
+	err := conf.Load(&cf, "oaas.conf")
+	if err == conf.ErrNoFile {
+		cf.Workers = 8
+		err = conf.Export(&cf, "oaas.conf")
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("generated sample oaas.conf, please set the values appropriately")
 		return
 	}
 
 	// start db connection
-	var err error
-	db, err = sql.Open("mysql", dsn)
+	db, err = sql.Open("mysql", cf.DSN)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// start api client
-	api = osuapi.NewClient(apiKey)
+	api = osuapi.NewClient(cf.APIKey)
 	err = api.Test()
 	if err != nil {
 		fmt.Println(err)
@@ -42,7 +42,10 @@ func main() {
 	}
 
 	// start a few workers
-	for i := 0; i < 8; i++ {
+	if cf.Workers == 0 {
+		cf.Workers = 8
+	}
+	for i := 0; i < cf.Workers; i++ {
 		go Worker()
 	}
 
@@ -61,4 +64,10 @@ func main() {
 	app.Static("/static", "static")
 
 	app.Run(":42043")
+}
+
+type confSt struct {
+	DSN     string `description:"go-mysql-driver dsn"`
+	APIKey  string `description:"osu api key"`
+	Workers int
 }
