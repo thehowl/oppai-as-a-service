@@ -25,11 +25,16 @@ var tasks = make(chan oppaiTask, 500)
 // Worker is a goroutine that calculates PP.
 func Worker() {
 	for task := range tasks {
+		strmods := strings.TrimSpace(task.Mods.String())
+		if strmods == "" {
+			strmods = "nomod"
+		}
+
 		cmd := exec.Command(
 			"./oppai",
 			task.FilePath,
 			strconv.FormatFloat(task.Accuracy, 'f', -1, 64)+"%",
-			"+"+strings.ToLower(task.Mods.String()),
+			"+"+strings.ToLower(strmods),
 			strconv.Itoa(task.MaxCombo)+"x",
 			strconv.Itoa(task.Misses)+"m",
 		)
