@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,12 @@ import (
 var db *sql.DB
 var api *osuapi.Client
 var cf confSt
+var recalc string
+
+func init() {
+	flag.StringVar(&recalc, "recalc", "", `use "all" to recalculate all scores, nothing to not recalculate, an username to recalculate only a specific user`)
+	flag.Parse()
+}
 
 func main() {
 	err := conf.Load(&cf, "oaas.conf")
@@ -48,6 +55,15 @@ func main() {
 	}
 	for i := 0; i < cf.Workers; i++ {
 		go Worker()
+	}
+
+	switch recalc {
+	case "":
+		break
+	case "all":
+		recalculate("")
+	default:
+		recalculate("WHERE username = ?", recalc)
 	}
 
 	// start webserver

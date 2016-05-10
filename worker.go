@@ -20,7 +20,7 @@ type oppaiTask struct {
 	Misses   int
 }
 
-var tasks = make(chan oppaiTask, 500)
+var tasks = make(chan oppaiTask, 3000)
 
 // Worker is a goroutine that calculates PP.
 func Worker() {
