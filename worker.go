@@ -22,9 +22,17 @@ type oppaiTask struct {
 
 var tasks = make(chan oppaiTask, 3000)
 
+const acceptedMods = 0 |
+	osuapi.ModNoFail | osuapi.ModEasy | osuapi.ModHidden |
+	osuapi.ModHardRock | osuapi.ModDoubleTime | osuapi.ModHalfTime |
+	osuapi.ModNightcore | osuapi.ModFlashlight | osuapi.ModSpunOut
+
 // Worker is a goroutine that calculates PP.
 func Worker() {
 	for task := range tasks {
+		// Remove all mods unsupported by oppai
+		task.Mods &= acceptedMods
+
 		strmods := strings.TrimSpace(task.Mods.String())
 		if strmods == "" {
 			strmods = "nomod"
