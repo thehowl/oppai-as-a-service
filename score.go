@@ -368,3 +368,29 @@ func ScoreSubmitGET(c *gin.Context) {
 	s.ScoreID = task.ScoreID
 	c.JSON(200, s)
 }
+
+func recalculate(extraWhere string, args ...interface{}) error {
+	rows, err := db.Query(`
+	SELECT 
+		scores.id, beatmaps.md5, scores.accuracy,
+		scores.mods, scores.max_combo, scores.misses 
+	FROM scores
+	LEFT JOIN beatmaps
+		ON scores.beatmap_id = beatmaps.id `+extraWhere, args...)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var task oppaiTask
+		err = rows.Scan(
+			&task.ScoreID, &task.FilePath, &task.Accuracy,
+			&task.Mods, &task.MaxCombo, &task.Misses,
+		)
+		if err != nil {
+			continue
+		}
+		task.FilePath = fmt.Sprintf("maps/%s.osu", task.FilePath)
+		tasks <- task
+	}
+	return rows.Close()
+}
