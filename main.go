@@ -61,10 +61,12 @@ func main() {
 	case "":
 		break
 	case "all":
-		recalculate("")
+		go recalculate("")
 	default:
-		recalculate("WHERE username = ?", recalc)
+		go recalculate("WHERE username = ?", recalc)
 	}
+
+	go recalculate("WHERE calculated = 0")
 
 	// start webserver
 	app := gin.Default()
